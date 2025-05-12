@@ -1,10 +1,11 @@
-from PyQt6.QtWidgets import QWidget, QLabel, QToolTip
+from PyQt6.QtWidgets import QWidget, QLabel, QToolTip, QFileDialog
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QMouseEvent, QCursor, QPixmap
 from PyQt6.QtCore import Qt, QPointF, QRectF
 import math
 from core.prim import compute_mst
 from core.simulation import simulate_water_flow
 from visual.plotter import show_plots
+import json
 
 NODE_RADIUS = 28
 
@@ -394,3 +395,47 @@ class CanvasView(QWidget):
         while y <= bottom:
             painter.drawLine(QPointF(left, y), QPointF(right, y))
             y += grid_spacing
+
+    def save_map(self):
+        path, _ = QFileDialog.getSaveFileName(self, "Save Map", "", "JSON Files (*.json)")
+        if not path:
+            return
+        data = {
+            'nodes': [
+                {
+                    'x': float(node.pos.x()),
+                    'y': float(node.pos.y()),
+                    'label': node.label,
+                    'is_source': node.is_source
+                } for node in self.nodes
+            ],
+            'edges': [
+                {
+                    'n1_idx': edge.n1_idx,
+                    'n2_idx': edge.n2_idx,
+                    'length': edge.length
+                } for edge in self.edges
+            ]
+        }
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
+        self.sidebar.set_result(f"Map saved to {path}")
+
+    def load_map(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Load Map", "", "JSON Files (*.json)")
+        if not path:
+            return
+        with open(path, 'r') as f:
+            data = json.load(f)
+        self.nodes = []
+        for n in data.get('nodes', []):
+            node = Node(QPointF(n['x'], n['y']), n['label'], n['is_source'])
+            self.nodes.append(node)
+        self.edges = []
+        for e in data.get('edges', []):
+            edge = Edge(e['n1_idx'], e['n2_idx'], e['length'])
+            self.edges.append(edge)
+        self.mst_edges = []
+        self.sim_results = None
+        self.sidebar.set_result(f"Map loaded from {path}")
+        self.update()

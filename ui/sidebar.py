@@ -45,8 +45,10 @@ class Sidebar(QWidget):
         self.btn_pan_zoom = QPushButton("Pan/Zoom")
         self.btn_zoom_in = QPushButton("+")
         self.btn_zoom_out = QPushButton("–")
+        self.btn_save_map = QPushButton("Save Map")
+        self.btn_load_map = QPushButton("Load Map")
 
-        for btn in [self.btn_add_node, self.btn_connect, self.btn_prim, self.btn_simulate, self.btn_show_graph, self.btn_remove_node, self.btn_disconnect_edge, self.btn_move_node, self.btn_pan_zoom]:
+        for btn in [self.btn_add_node, self.btn_connect, self.btn_prim, self.btn_simulate, self.btn_show_graph, self.btn_remove_node, self.btn_disconnect_edge, self.btn_move_node, self.btn_pan_zoom, self.btn_save_map, self.btn_load_map]:
             btn.setStyleSheet("font-size: 16px; padding: 8px;")
             layout.addWidget(btn)
 
@@ -114,6 +116,8 @@ class Sidebar(QWidget):
         self.btn_zoom_in.clicked.connect(self.on_zoom_in)
         self.btn_zoom_out.clicked.connect(self.on_zoom_out)
         self.chk_show_grid.toggled.connect(self.on_toggle_grid)
+        self.btn_save_map.clicked.connect(self.on_save_map)
+        self.btn_load_map.clicked.connect(self.on_load_map)
 
     def _hline(self):
         line = QFrame()
@@ -171,6 +175,14 @@ class Sidebar(QWidget):
     def on_toggle_grid(self, checked):
         if self.canvas:
             self.canvas.set_grid_enabled(checked)
+
+    def on_save_map(self):
+        if self.canvas:
+            self.canvas.save_map()
+
+    def on_load_map(self):
+        if self.canvas:
+            self.canvas.load_map()
 
     def set_result(self, text):
         self.result_label.setText(text)
