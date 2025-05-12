@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QLabel
+from PyQt6.QtWidgets import QWidget, QLabel, QToolTip
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QMouseEvent, QCursor
 from PyQt6.QtCore import Qt, QPointF, QRectF
 import math
@@ -42,6 +42,8 @@ class CanvasView(QWidget):
         self._last_pan_pos = None
         # Grid state
         self.grid_enabled = False
+        # Tooltip state
+        self._last_tooltip_node = None
 
     def set_mode(self, mode):
         self.mode = mode
@@ -83,8 +85,23 @@ class CanvasView(QWidget):
 
     def mouseMoveEvent(self, event: QMouseEvent):
         pos = event.position()
+        scene_pos = self.map_to_scene(pos)
+        # Tooltip logic
+        node_idx = self.get_node_at(scene_pos)
+        if node_idx is not None:
+            node = self.nodes[node_idx]
+            details = f"<b>{node.label}</b>"
+            if self.sim_results and node_idx in self.sim_results:
+                t, p = self.sim_results[node_idx]
+                details += f"<br>Time: {t:.2f}<br>Pressure: {p:.2f}"
+            QToolTip.showText(event.globalPosition().toPoint(), details, self)
+            self._last_tooltip_node = node_idx
+        else:
+            if self._last_tooltip_node is not None:
+                QToolTip.hideText()
+                self._last_tooltip_node = None
         if self.mode == "move_node" and self.dragged_node_idx is not None:
-            self.nodes[self.dragged_node_idx].pos = self.map_to_scene(pos)
+            self.nodes[self.dragged_node_idx].pos = scene_pos
             self.update()
         elif self.mode == "pan_zoom" and self._last_pan_pos is not None:
             delta = event.position() - self._last_pan_pos
@@ -267,7 +284,9 @@ class CanvasView(QWidget):
             n2 = self.nodes[edge.n2_idx]
             p1, p2 = n1.pos, n2.pos
             # Edge style
-            if edge.is_mst:
+            if self.sim_results and edge.is_mst:
+                pen = QPen(QColor(64, 156, 255), 4)  # Blue for water flow
+            elif edge.is_mst:
                 pen = QPen(QColor(255, 64, 64), 4)
             else:
                 pen = QPen(QColor(120, 120, 120), 2, Qt.PenStyle.DashLine)
@@ -283,7 +302,9 @@ class CanvasView(QWidget):
         font = QFont("Arial", 13, QFont.Weight.Bold)
         for idx, node in enumerate(self.nodes):
             # Node color
-            if node.is_source:
+            if self.sim_results and idx not in self.sim_results:
+                color = QColor(120, 120, 120, 180)  # Grayed out if no water
+            elif node.is_source:
                 color = QColor(56, 183, 74)
             else:
                 color = QColor(0, 188, 212)
@@ -293,21 +314,18 @@ class CanvasView(QWidget):
             painter.setPen(QPen(QColor(30, 32, 38), 3))
             painter.drawEllipse(node.pos, NODE_RADIUS, NODE_RADIUS)
             # Label
-            painter.setFont(font)
+            # Adjust font size if label is too wide
+            label_font = QFont("Arial", 13, QFont.Weight.Bold)
+            metrics = painter.fontMetrics()
+            label_width = metrics.horizontalAdvance(node.label)
+            max_width = NODE_RADIUS * 1.8
+            if label_width > max_width:
+                shrink_factor = max_width / label_width
+                label_font.setPointSizeF(13 * shrink_factor)
+            painter.setFont(label_font)
             painter.setPen(QColor(30, 32, 38))
             rect = QRectF(node.pos.x() - NODE_RADIUS, node.pos.y() - NODE_RADIUS, NODE_RADIUS*2, NODE_RADIUS*2)
             painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, node.label)
-            # Simulation results
-            if self.sim_results and idx in self.sim_results:
-                t, p = self.sim_results[idx]
-                txt = f"T={t:.1f}\nP={p:.1f}"
-                painter.setFont(QFont("Arial", 9))
-                # Anomaly: low pressure
-                if p < 20:
-                    painter.setPen(QColor(255, 64, 64))
-                else:
-                    painter.setPen(QColor(255, 255, 255))
-                painter.drawText(node.pos + QPointF(-NODE_RADIUS, NODE_RADIUS+2), txt)
 
     def remove_node_at(self, idx):
         node = self.nodes[idx]
