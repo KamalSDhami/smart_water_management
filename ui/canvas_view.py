@@ -36,19 +36,24 @@ class CanvasView(QWidget):
         self.dragged_node_idx = None
         self.mst_edges = []
         self.sim_results = None
+        # Pan/zoom state
+        self.pan_offset = QPointF(0, 0)
+        self.zoom_factor = 1.0
+        self._last_pan_pos = None
 
     def set_mode(self, mode):
         self.mode = mode
         self.selected_nodes = []
         self.dragged_node_idx = None
+        self._last_pan_pos = None
         self.update()
 
     def mousePressEvent(self, event: QMouseEvent):
         pos = event.position()
         if self.mode == "add_node":
-            self.add_node(pos)
+            self.add_node(self.map_to_scene(pos))
         elif self.mode == "connect":
-            idx = self.get_node_at(pos)
+            idx = self.get_node_at(self.map_to_scene(pos))
             if idx is not None:
                 if idx not in self.selected_nodes:
                     self.selected_nodes.append(idx)
@@ -56,25 +61,33 @@ class CanvasView(QWidget):
                     self.add_edge(self.selected_nodes[0], self.selected_nodes[1])
                     self.selected_nodes = []
         elif self.mode == "remove_node":
-            idx = self.get_node_at(pos)
+            idx = self.get_node_at(self.map_to_scene(pos))
             if idx is not None:
                 self.remove_node_at(idx)
         elif self.mode == "disconnect_edge":
-            edge_idx = self.get_edge_at(pos)
+            edge_idx = self.get_edge_at(self.map_to_scene(pos))
             if edge_idx is not None:
                 self.disconnect_edge_at(edge_idx)
         elif self.mode == "move_node":
-            idx = self.get_node_at(pos)
+            idx = self.get_node_at(self.map_to_scene(pos))
             if idx is not None:
                 self.dragged_node_idx = idx
                 self.nodes[idx].dragging = True
                 self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
+        elif self.mode == "pan_zoom":
+            self._last_pan_pos = event.position()
+            self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
         self.update()
 
     def mouseMoveEvent(self, event: QMouseEvent):
         pos = event.position()
         if self.mode == "move_node" and self.dragged_node_idx is not None:
-            self.nodes[self.dragged_node_idx].pos = pos
+            self.nodes[self.dragged_node_idx].pos = self.map_to_scene(pos)
+            self.update()
+        elif self.mode == "pan_zoom" and self._last_pan_pos is not None:
+            delta = event.position() - self._last_pan_pos
+            self.pan_offset += delta
+            self._last_pan_pos = event.position()
             self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -83,6 +96,39 @@ class CanvasView(QWidget):
             self.dragged_node_idx = None
             self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
             self.update()
+        elif self.mode == "pan_zoom" and self._last_pan_pos is not None:
+            self._last_pan_pos = None
+            self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+            self.update()
+
+    def wheelEvent(self, event):
+        if self.mode == "pan_zoom":
+            angle = event.angleDelta().y()
+            factor = 1.2 if angle > 0 else 1/1.2
+            self.zoom(factor, event.position())
+
+    def zoom(self, factor, center=None):
+        # Zoom relative to a point (center), default is widget center
+        old_zoom = self.zoom_factor
+        self.zoom_factor *= factor
+        if self.zoom_factor < 0.2:
+            self.zoom_factor = 0.2
+        if self.zoom_factor > 5.0:
+            self.zoom_factor = 5.0
+        if center is None:
+            center = QPointF(self.width()/2, self.height()/2)
+        # Adjust pan so that zoom is centered on the mouse position
+        offset_to_center = center - self.pan_offset
+        self.pan_offset += offset_to_center * (1 - factor)
+        self.update()
+
+    def map_to_scene(self, pos):
+        # Map from widget coordinates to scene coordinates
+        return (pos - self.pan_offset) / self.zoom_factor
+
+    def map_from_scene(self, pos):
+        # Map from scene coordinates to widget coordinates
+        return pos * self.zoom_factor + self.pan_offset
 
     def get_node_at(self, pos):
         for idx, node in enumerate(self.nodes):
@@ -203,8 +249,12 @@ class CanvasView(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.save()
+        painter.translate(self.pan_offset)
+        painter.scale(self.zoom_factor, self.zoom_factor)
         self._draw_edges(painter)
         self._draw_nodes(painter)
+        painter.restore()
 
     def _draw_edges(self, painter):
         font = QFont("Arial", 12)

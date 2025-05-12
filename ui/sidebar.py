@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QLabel, QSpinBox, QGroupBox, QFormLayout, QFrame, QScrollArea
+    QWidget, QVBoxLayout, QPushButton, QLabel, QSpinBox, QGroupBox, QFormLayout, QFrame, QScrollArea, QHBoxLayout
 )
 from PyQt6.QtCore import Qt
 
@@ -42,10 +42,21 @@ class Sidebar(QWidget):
         self.btn_remove_node = QPushButton("Remove Node")
         self.btn_disconnect_edge = QPushButton("Disconnect Edge")
         self.btn_move_node = QPushButton("Move Node")
+        self.btn_pan_zoom = QPushButton("Pan/Zoom")
+        self.btn_zoom_in = QPushButton("+")
+        self.btn_zoom_out = QPushButton("–")
 
-        for btn in [self.btn_add_node, self.btn_connect, self.btn_prim, self.btn_simulate, self.btn_show_graph, self.btn_remove_node, self.btn_disconnect_edge, self.btn_move_node]:
+        for btn in [self.btn_add_node, self.btn_connect, self.btn_prim, self.btn_simulate, self.btn_show_graph, self.btn_remove_node, self.btn_disconnect_edge, self.btn_move_node, self.btn_pan_zoom]:
             btn.setStyleSheet("font-size: 16px; padding: 8px;")
             layout.addWidget(btn)
+
+        # Add zoom in/out buttons in a horizontal layout
+        zoom_layout = QHBoxLayout()
+        self.btn_zoom_in.setStyleSheet("font-size: 18px; padding: 6px 16px;")
+        self.btn_zoom_out.setStyleSheet("font-size: 18px; padding: 6px 16px;")
+        zoom_layout.addWidget(self.btn_zoom_in)
+        zoom_layout.addWidget(self.btn_zoom_out)
+        layout.addLayout(zoom_layout)
 
         layout.addWidget(self._hline())
 
@@ -92,6 +103,9 @@ class Sidebar(QWidget):
         self.btn_remove_node.clicked.connect(self.on_remove_node)
         self.btn_disconnect_edge.clicked.connect(self.on_disconnect_edge)
         self.btn_move_node.clicked.connect(self.on_move_node)
+        self.btn_pan_zoom.clicked.connect(self.on_pan_zoom)
+        self.btn_zoom_in.clicked.connect(self.on_zoom_in)
+        self.btn_zoom_out.clicked.connect(self.on_zoom_out)
 
     def _hline(self):
         line = QFrame()
@@ -133,6 +147,18 @@ class Sidebar(QWidget):
     def on_move_node(self):
         if self.canvas:
             self.canvas.set_mode("move_node")
+
+    def on_pan_zoom(self):
+        if self.canvas:
+            self.canvas.set_mode("pan_zoom")
+
+    def on_zoom_in(self):
+        if self.canvas:
+            self.canvas.zoom(1.2)
+
+    def on_zoom_out(self):
+        if self.canvas:
+            self.canvas.zoom(1/1.2)
 
     def set_result(self, text):
         self.result_label.setText(text)
