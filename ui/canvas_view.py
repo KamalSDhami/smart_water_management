@@ -40,6 +40,8 @@ class CanvasView(QWidget):
         self.pan_offset = QPointF(0, 0)
         self.zoom_factor = 1.0
         self._last_pan_pos = None
+        # Grid state
+        self.grid_enabled = False
 
     def set_mode(self, mode):
         self.mode = mode
@@ -252,6 +254,8 @@ class CanvasView(QWidget):
         painter.save()
         painter.translate(self.pan_offset)
         painter.scale(self.zoom_factor, self.zoom_factor)
+        if self.grid_enabled:
+            self._draw_grid(painter)
         self._draw_edges(painter)
         self._draw_nodes(painter)
         painter.restore()
@@ -327,3 +331,30 @@ class CanvasView(QWidget):
         del self.edges[edge_idx]
         self.sidebar.set_result(f"Disconnected {n1.label} ↔ {n2.label}")
         self.update()
+
+    def set_grid_enabled(self, enabled):
+        self.grid_enabled = enabled
+        self.update()
+
+    def _draw_grid(self, painter):
+        grid_spacing = 40  # in scene coordinates
+        rect = self.rect()
+        # Map widget rect to scene rect
+        top_left = self.map_to_scene(QPointF(0, 0))
+        bottom_right = self.map_to_scene(QPointF(rect.width(), rect.height()))
+        left = int(top_left.x() // grid_spacing * grid_spacing)
+        right = int(bottom_right.x() // grid_spacing * grid_spacing + grid_spacing)
+        top = int(top_left.y() // grid_spacing * grid_spacing)
+        bottom = int(bottom_right.y() // grid_spacing * grid_spacing + grid_spacing)
+        pen = QPen(QColor(80, 80, 80, 120), 1)
+        painter.setPen(pen)
+        # Vertical lines
+        x = left
+        while x <= right:
+            painter.drawLine(QPointF(x, top), QPointF(x, bottom))
+            x += grid_spacing
+        # Horizontal lines
+        y = top
+        while y <= bottom:
+            painter.drawLine(QPointF(left, y), QPointF(right, y))
+            y += grid_spacing

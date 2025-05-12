@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton, QLabel, QSpinBox, QGroupBox, QFormLayout, QFrame, QScrollArea, QHBoxLayout
+    QWidget, QVBoxLayout, QPushButton, QLabel, QSpinBox, QGroupBox, QFormLayout, QFrame, QScrollArea, QHBoxLayout, QCheckBox
 )
 from PyQt6.QtCore import Qt
 
@@ -84,6 +84,13 @@ class Sidebar(QWidget):
         self.result_label.setStyleSheet("font-size: 14px; color: #FFD54F;")
         layout.addWidget(self.result_label)
 
+        layout.addWidget(self._hline())
+
+        # Toggle grid
+        self.chk_show_grid = QCheckBox("Show Grid")
+        self.chk_show_grid.setStyleSheet("font-size: 15px; padding: 6px;")
+        layout.addWidget(self.chk_show_grid)
+
         layout.addStretch(1)
 
         # Set the content widget to the scroll area
@@ -106,6 +113,7 @@ class Sidebar(QWidget):
         self.btn_pan_zoom.clicked.connect(self.on_pan_zoom)
         self.btn_zoom_in.clicked.connect(self.on_zoom_in)
         self.btn_zoom_out.clicked.connect(self.on_zoom_out)
+        self.chk_show_grid.toggled.connect(self.on_toggle_grid)
 
     def _hline(self):
         line = QFrame()
@@ -159,6 +167,10 @@ class Sidebar(QWidget):
     def on_zoom_out(self):
         if self.canvas:
             self.canvas.zoom(1/1.2)
+
+    def on_toggle_grid(self, checked):
+        if self.canvas:
+            self.canvas.set_grid_enabled(checked)
 
     def set_result(self, text):
         self.result_label.setText(text)
