@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QLabel, QToolTip, QFileDialog
+from PyQt6.QtWidgets import QWidget, QLabel, QToolTip, QFileDialog, QMessageBox
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QMouseEvent, QCursor, QPixmap
 from PyQt6.QtCore import Qt, QPointF, QRectF
 import math
@@ -213,6 +213,7 @@ class CanvasView(QWidget):
 
     def run_prim(self):
         if not self.nodes or not self.edges:
+            self.show_error("Add and connect nodes before running Prim's algorithm.")
             self.sidebar.set_result("Add nodes and connect them first.")
             return
         G, edge_map = self._to_networkx()
@@ -231,19 +232,36 @@ class CanvasView(QWidget):
 
     def simulate_flow(self, initial_pressure, flow_rate):
         if not self.nodes or not self.edges:
+            self.show_error("Add and connect nodes before running simulation.")
             self.sidebar.set_result("Add nodes and connect them first.")
             return
         if not any(n.is_source for n in self.nodes):
+            self.show_error("Add a Source node before running simulation.")
             self.sidebar.set_result("Add a Source node first.")
+            return
+        if not any(e.is_mst for e in self.edges):
+            self.show_error("Run Prim's algorithm before running simulation.")
+            self.sidebar.set_result("Run Prim's algorithm first.")
             return
         G, edge_map = self._to_networkx(mst_only=True)
         source_idx = next(i for i, n in enumerate(self.nodes) if n.is_source)
         results = simulate_water_flow(G, source_idx, initial_pressure, flow_rate)
         self.sim_results = results
         text = "Simulation Results:\n"
+        low_pressure = False
+        not_reached = []
+        for i, n in enumerate(self.nodes):
+            if not n.is_source and i not in results:
+                not_reached.append(n.label)
         for node_idx, (t, p) in results.items():
             label = self.nodes[node_idx].label
             text += f"{label}: Time={t:.2f}, Pressure={p:.2f}\n"
+            if not self.nodes[node_idx].is_source and p < 20:
+                low_pressure = True
+        if not_reached:
+            self.show_error(f"Not all houses are getting water: {', '.join(not_reached)}")
+        elif low_pressure:
+            self.show_error("Low pressure detected in one or more houses.")
         self.sidebar.set_result(text)
         self.update()
 
@@ -439,3 +457,6 @@ class CanvasView(QWidget):
         self.sim_results = None
         self.sidebar.set_result(f"Map loaded from {path}")
         self.update()
+
+    def show_error(self, message):
+        QMessageBox.critical(self, "Error", message)
