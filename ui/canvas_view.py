@@ -285,7 +285,12 @@ class CanvasView(QWidget):
             p1, p2 = n1.pos, n2.pos
             # Edge style
             if self.sim_results and edge.is_mst:
-                pen = QPen(QColor(64, 156, 255), 4)  # Blue for water flow
+                p1_val = self.sim_results.get(edge.n1_idx, (None, 0))[1]
+                p2_val = self.sim_results.get(edge.n2_idx, (None, 0))[1]
+                if p1_val > 0 and p2_val > 0:
+                    pen = QPen(QColor(64, 156, 255), 4)  # Blue for water flow
+                else:
+                    pen = QPen(QColor(120, 120, 120), 2, Qt.PenStyle.DashLine)
             elif edge.is_mst:
                 pen = QPen(QColor(255, 64, 64), 4)
             else:
@@ -302,7 +307,9 @@ class CanvasView(QWidget):
         font = QFont("Arial", 13, QFont.Weight.Bold)
         for idx, node in enumerate(self.nodes):
             # Node color
-            if self.sim_results and idx not in self.sim_results:
+            if self.sim_results and idx in self.sim_results and self.sim_results[idx][1] == 0:
+                color = QColor(120, 120, 120, 180)  # Grayed out if pressure is 0
+            elif self.sim_results and idx not in self.sim_results:
                 color = QColor(120, 120, 120, 180)  # Grayed out if no water
             elif node.is_source:
                 color = QColor(56, 183, 74)
