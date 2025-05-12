@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QLabel, QToolTip
-from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QMouseEvent, QCursor
+from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QFont, QMouseEvent, QCursor, QPixmap
 from PyQt6.QtCore import Qt, QPointF, QRectF
 import math
 from core.prim import compute_mst
@@ -44,6 +44,9 @@ class CanvasView(QWidget):
         self.grid_enabled = False
         # Tooltip state
         self._last_tooltip_node = None
+        # Icons
+        self.house_icon = QPixmap('icons/housee.png')
+        self.source_icon = QPixmap('icons/source.png')
 
     def set_mode(self, mode):
         self.mode = mode
@@ -317,11 +320,19 @@ class CanvasView(QWidget):
                 color = QColor(0, 188, 212)
             if node.selected or idx in self.selected_nodes:
                 color = QColor(255, 215, 64)
-            painter.setBrush(QBrush(color))
+            # Draw white background ellipse
+            painter.setBrush(QBrush(QColor(255, 255, 255)))
             painter.setPen(QPen(QColor(30, 32, 38), 3))
             painter.drawEllipse(node.pos, NODE_RADIUS, NODE_RADIUS)
-            # Label
-            # Adjust font size if label is too wide
+            # Draw icon
+            if node.is_source:
+                icon = self.source_icon
+            else:
+                icon = self.house_icon
+            icon_size = NODE_RADIUS * 1.7
+            icon_rect = QRectF(node.pos.x() - icon_size/2, node.pos.y() - icon_size/2, icon_size, icon_size)
+            painter.drawPixmap(int(icon_rect.x()), int(icon_rect.y()), int(icon_rect.width()), int(icon_rect.height()), icon)
+            # Label (drawn below the icon)
             label_font = QFont("Arial", 13, QFont.Weight.Bold)
             metrics = painter.fontMetrics()
             label_width = metrics.horizontalAdvance(node.label)
@@ -331,8 +342,8 @@ class CanvasView(QWidget):
                 label_font.setPointSizeF(13 * shrink_factor)
             painter.setFont(label_font)
             painter.setPen(QColor(30, 32, 38))
-            rect = QRectF(node.pos.x() - NODE_RADIUS, node.pos.y() - NODE_RADIUS, NODE_RADIUS*2, NODE_RADIUS*2)
-            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, node.label)
+            label_rect = QRectF(node.pos.x() - NODE_RADIUS, node.pos.y() + NODE_RADIUS * 0.9, NODE_RADIUS*2, NODE_RADIUS*0.9)
+            painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, node.label)
 
     def remove_node_at(self, idx):
         node = self.nodes[idx]
