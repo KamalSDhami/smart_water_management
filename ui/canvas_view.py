@@ -6,6 +6,7 @@ from core.prim import compute_mst
 from core.simulation import simulate_water_flow
 from visual.plotter import show_plots
 import json
+import os
 
 NODE_RADIUS = 28
 
@@ -45,9 +46,10 @@ class CanvasView(QWidget):
         self.grid_enabled = False
         # Tooltip state
         self._last_tooltip_node = None
-        # Icons
-        self.house_icon = QPixmap('icons/housee.png')
-        self.source_icon = QPixmap('icons/source.png')
+        # Icons (use absolute path)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.house_icon = QPixmap(os.path.join(base_dir, '../icons/housee.png'))
+        self.source_icon = QPixmap(os.path.join(base_dir, '../icons/source.png'))
 
     def set_mode(self, mode):
         self.mode = mode
