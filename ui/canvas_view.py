@@ -44,6 +44,8 @@ class CanvasView(QWidget):
         self._last_pan_pos = None
         # Grid state
         self.grid_enabled = False
+        # Label state
+        self.show_labels = True
         # Tooltip state
         self._last_tooltip_node = None
         # Icons (use absolute path)
@@ -359,18 +361,24 @@ class CanvasView(QWidget):
             icon_size = NODE_RADIUS * 1.7
             icon_rect = QRectF(node.pos.x() - icon_size/2, node.pos.y() - icon_size/2, icon_size, icon_size)
             painter.drawPixmap(int(icon_rect.x()), int(icon_rect.y()), int(icon_rect.width()), int(icon_rect.height()), icon)
-            # Label (drawn below the icon)
-            label_font = QFont("Arial", 13, QFont.Weight.Bold)
-            metrics = painter.fontMetrics()
-            label_width = metrics.horizontalAdvance(node.label)
-            max_width = NODE_RADIUS * 1.8
-            if label_width > max_width:
-                shrink_factor = max_width / label_width
-                label_font.setPointSizeF(13 * shrink_factor)
-            painter.setFont(label_font)
-            painter.setPen(QColor(30, 32, 38))
-            label_rect = QRectF(node.pos.x() - NODE_RADIUS, node.pos.y() + NODE_RADIUS * 0.9, NODE_RADIUS*2, NODE_RADIUS*0.9)
-            painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, node.label)
+            
+            # Only draw label if show_labels is True
+            if self.show_labels:
+                # Label (drawn below the icon)
+                label_font = QFont("Arial", 13, QFont.Weight.Bold)
+                metrics = painter.fontMetrics()
+                label_width = metrics.horizontalAdvance(node.label)
+                max_width = NODE_RADIUS * 1.8
+                if label_width > max_width:
+                    shrink_factor = max_width / label_width
+                    label_font.setPointSizeF(13 * shrink_factor)
+                painter.setFont(label_font)
+                # Use white color for better visibility
+                painter.setPen(QColor(255, 255, 255))
+                # Add a dark background for better contrast
+                label_rect = QRectF(node.pos.x() - NODE_RADIUS, node.pos.y() + NODE_RADIUS * 0.9, NODE_RADIUS*2, NODE_RADIUS*0.9)
+                painter.fillRect(label_rect, QColor(0, 0, 0, 180))  # Semi-transparent black background
+                painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, node.label)
 
     def remove_node_at(self, idx):
         node = self.nodes[idx]
@@ -468,3 +476,7 @@ class CanvasView(QWidget):
 
     def show_error(self, message):
         QMessageBox.critical(self, "Error", message)
+
+    def toggle_labels(self):
+        self.show_labels = not self.show_labels
+        self.update()

@@ -93,6 +93,12 @@ class Sidebar(QWidget):
         self.chk_show_grid.setStyleSheet("font-size: 15px; padding: 6px;")
         layout.addWidget(self.chk_show_grid)
 
+        # Toggle labels
+        self.chk_show_labels = QCheckBox("Show Labels")
+        self.chk_show_labels.setChecked(True)  # Default to showing labels
+        self.chk_show_labels.setStyleSheet("font-size: 15px; padding: 6px;")
+        layout.addWidget(self.chk_show_labels)
+
         layout.addStretch(1)
 
         # Set the content widget to the scroll area
@@ -116,6 +122,7 @@ class Sidebar(QWidget):
         self.btn_zoom_in.clicked.connect(self.on_zoom_in)
         self.btn_zoom_out.clicked.connect(self.on_zoom_out)
         self.chk_show_grid.toggled.connect(self.on_toggle_grid)
+        self.chk_show_labels.toggled.connect(self.on_toggle_labels)
         self.btn_save_map.clicked.connect(self.on_save_map)
         self.btn_load_map.clicked.connect(self.on_load_map)
 
@@ -175,6 +182,11 @@ class Sidebar(QWidget):
     def on_toggle_grid(self, checked):
         if self.canvas:
             self.canvas.set_grid_enabled(checked)
+
+    def on_toggle_labels(self, checked):
+        if self.canvas:
+            self.canvas.show_labels = checked
+            self.canvas.update()
 
     def on_save_map(self):
         if self.canvas:
