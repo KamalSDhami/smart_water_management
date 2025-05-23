@@ -108,6 +108,12 @@ class CanvasView(QWidget):
                 self._last_tooltip_node = None
         if self.mode == "move_node" and self.dragged_node_idx is not None:
             self.nodes[self.dragged_node_idx].pos = scene_pos
+            # Update lengths of all edges connected to the moved node
+            for edge in self.edges:
+                if edge.n1_idx == self.dragged_node_idx or edge.n2_idx == self.dragged_node_idx:
+                    n1 = self.nodes[edge.n1_idx]
+                    n2 = self.nodes[edge.n2_idx]
+                    edge.length = math.hypot(n1.pos.x() - n2.pos.x(), n1.pos.y() - n2.pos.y())
             self.update()
         elif self.mode == "pan_zoom" and self._last_pan_pos is not None:
             delta = event.position() - self._last_pan_pos
